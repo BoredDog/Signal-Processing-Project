@@ -8,7 +8,7 @@ n     = 0:N-1;
 t_uniform = n * Ts; 
 p_list = 0.01:0.01:0.10; 
 p_plot = 0.05;           
-trials = 20;             
+trials = 30;             
 
 %% ---------- SIGNAL DEFINITIONS ----------
 f1 = 60;   sig1 = @(t) sin(2*pi*f1*t); 
@@ -124,5 +124,3 @@ xlabel('Missing probability p');
 ylabel('RMSE (Average of 20 trials)');
 title('Scenario (b): RMSE vs p (Manual Linear Interpolation)');
 legend(names, 'Location','northwest', 'Interpreter','none');
-
-fprintf('\n=== Scenario (b) with Manual Linear Interpolation COMPLETE ===\n');
