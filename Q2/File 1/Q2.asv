@@ -1,6 +1,6 @@
 clc; clear; close all;
 %% setting things up
-[y,fs]=audioread('File4.wav');
+[y,fs]=audioread('File1.wav');
 if size(y,2)>1
     y=mean(y,2);
 end
@@ -20,7 +20,7 @@ flux=[0,flux];
 flux=flux/max(flux);
 
 % locating the hits
-[peaks,indices]=findpeaks(flux,'MinPeakHeight',0.1,'MinPeakDistance',5);
+[peaks,indices] = findpeaks(flux, 'MinPeakHeight', 0.1,'MinPeakProminence', 0.2);
 hit_times=time_axis_stft(indices);
 num_hits=length(hit_times);
 
@@ -30,19 +30,15 @@ disp(['found ' num2str(num_hits) ' hits']);
 hit_freqs=zeros(1,num_hits);
 energy=sum(mag.^2); 
 energy=energy/max(energy);
-% smooth the energy curve so it doesnt jitter and cut off too early
-% cutoffs for the 5 groups (added another one)
-cut1=2700; 
-cut2=4200; 
-cut3=6000;
-cut4=8200; % new split for super high stuff
 
-% making lists for the 5 drums
+% cutoffs for the groups
+low_cut=6500; 
+high_cut=9000;
+
+% making lists for the 3 drums
 group1=[]; 
 group2=[]; 
 group3=[];
-group4=[]; % added group 4
-group5=[]; % added group 5
 gap=zeros(round(0.1*fs),1);
 
 % saving these spots to show on the graph later
@@ -106,17 +102,13 @@ for k=1:num_hits
     end
     hit_freqs(k)=val;
     
-    % sorting it out into 5 groups now
-    if val<cut1
+    % sorting it out
+    if val<low_cut
         group1=[group1; sound_clip; gap];
-    elseif val<cut2
-        group2=[group2; sound_clip; gap];
-    elseif val<cut3
+    elseif val>high_cut
         group3=[group3; sound_clip; gap];
-    elseif val<cut4
-        group4=[group4; sound_clip; gap];
     else
-        group5=[group5; sound_clip; gap];
+        group2=[group2; sound_clip; gap];
     end
 end
 
@@ -170,29 +162,22 @@ legend('Centroid Frequency');
 grid on;
 
 %% time between hits
-csvwrite('intervals.csv', [hit_times(:), [diff(hit_times(:)); 0]]);
+intervals=diff(hit_times);
+csvwrite('intervals.csv',intervals);
+disp('saved intervals.csv');
+
 %% saving the files
 % writing the low sounds
 if ~isempty(group1)
     audiowrite('out1.wav',group1,fs);
 end
 
-% writing the midlow sounds
+% writing the mid sounds
 if ~isempty(group2)
     audiowrite('out2.wav',group2,fs);
 end
 
-% writing the midhigh sounds
+% writing the high sounds
 if ~isempty(group3)
     audiowrite('out3.wav',group3,fs);
-end
-
-% writing the high sounds
-if ~isempty(group4)
-    audiowrite('out4.wav',group4,fs);
-end
-
-% writing the very high sounds
-if ~isempty(group5)
-    audiowrite('out5.wav',group5,fs);
 end

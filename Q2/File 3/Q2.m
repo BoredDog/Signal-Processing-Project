@@ -20,7 +20,7 @@ flux=[0,flux];
 flux=flux/max(flux);
 
 % locating the hits
-[peaks,indices]=findpeaks(flux,'MinPeakHeight',0.05,'MinPeakDistance',5);
+[peaks,indices]=findpeaks(flux,'MinPeakHeight',0.1,'MinPeakDistance',5);
 hit_times=time_axis_stft(indices);
 num_hits=length(hit_times);
 
@@ -168,31 +168,24 @@ legend('Centroid Frequency');
 grid on;
 
 %% time between hits
-intervals=diff(hit_times);
-csvwrite('intervals.csv',intervals);
-disp('saved intervals.csv');
-
+csvwrite('intervals.csv', [hit_times(:), [diff(hit_times(:)); 0]]);
 %% saving the files
 % writing the low sounds
 if ~isempty(group1)
     audiowrite('out1.wav',group1,fs);
-    disp('saved out1.wav');
 end
 
-% writing the mid-low sounds
+% writing the midlow sounds
 if ~isempty(group2)
     audiowrite('out2.wav',group2,fs);
-    disp('saved out2.wav');
 end
 
-% writing the mid-high sounds
+% writing the midhigh sounds
 if ~isempty(group3)
     audiowrite('out3.wav',group3,fs);
-    disp('saved out3.wav');
 end
 
 % writing the high sounds
 if ~isempty(group4)
     audiowrite('out4.wav',group4,fs);
-    disp('saved out4.wav');
 end

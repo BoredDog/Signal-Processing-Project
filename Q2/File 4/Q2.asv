@@ -20,7 +20,7 @@ flux=[0,flux];
 flux=flux/max(flux);
 
 % locating the hits
-[peaks,indices]=findpeaks(flux,'MinPeakHeight',0.1,'MinPeakDistance',5);
+[peaks,indices] = findpeaks(flux, 'MinPeakHeight', 0.05,'MinPeakProminence', 0.1);
 hit_times=time_axis_stft(indices);
 num_hits=length(hit_times);
 
