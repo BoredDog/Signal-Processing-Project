@@ -1,19 +1,17 @@
 clear; clc; close all;
 
-%% ---------- PARAMETERS ----------
 Fs    = 2000;       
 Ts    = 1/Fs;       
 N     = 512;        
 n     = 0:N-1;      
 t_uniform = n * Ts; 
 p_list = 0.01:0.01:0.10; 
-p_plot = 0.05;           
-trials = 30;             
+p_plot = 0.05;            
+trials = 30;              
 
-%% ---------- SIGNAL DEFINITIONS ----------
 f1 = 60;   sig1 = @(t) sin(2*pi*f1*t); 
-f2 = 120;  sig2 = @(t) cos(2*pi*f2*t + pi/6);  
-f3 = 300;  sig3 = @(t) 0.8*sin(2*pi*f3*t);     
+f2 = 120;  sig2 = @(t) cos(2*pi*f2*t + pi/6);   
+f3 = 300;  sig3 = @(t) 0.8*sin(2*pi*f3*t);      
 
 signals = {sig1, sig2, sig3};
 names   = {'Signal1: 60 Hz sine',...
@@ -24,7 +22,6 @@ numS = numel(signals);
 numP = numel(p_list);
 RMSE_lin = zeros(numS, numP);
 
-%% ---------- MAIN LOOP ----------
 for s = 1:numS
     x_func = signals{s};
     x_true = x_func(t_uniform);
@@ -40,9 +37,8 @@ for s = 1:numS
             if all(~avail), avail(randi(N)) = true; end 
             
             t_avail = t_uniform(avail); 
-            x_avail = x_true(avail);    
+            x_avail = x_true(avail);     
             
-            % --- LINEAR INTERPOLATION ---
             x_est = zeros(1, N); 
             
             if numel(t_avail) <= 1 
@@ -79,7 +75,6 @@ for s = 1:numS
         RMSE_lin(s, ip) = mean(rmse_trials); 
         fprintf("p = %.2f  RMSE = %.6e\n", p, RMSE_lin(s,ip));
         
-        %% ---------- 4-SUBPLOT FIGURE FOR SELECTED p ----------
         if abs(p - p_plot) < 1e-6
             fig = figure;
             
@@ -114,13 +109,12 @@ for s = 1:numS
     end
 end
 
-%% ---------- RMSE SUMMARY PLOT ----------
 figure;
 plot(p_list, RMSE_lin(1,:), '-o','LineWidth',1.6); hold on;
 plot(p_list, RMSE_lin(2,:), '-s','LineWidth',1.6);
 plot(p_list, RMSE_lin(3,:), '-^','LineWidth',1.6);
 grid on;
 xlabel('Missing probability p');
-ylabel('RMSE (Average of 20 trials)');
+ylabel('RMSE (Average of 30 trials)');
 title('Scenario (b): RMSE vs p (Manual Linear Interpolation)');
 legend(names, 'Location','northwest', 'Interpreter','none');

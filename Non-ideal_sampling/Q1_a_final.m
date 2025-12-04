@@ -8,7 +8,6 @@ n     = 0:N-1;
 t_uniform = n * Ts; 
 K_list = 1:4;       
 
-% --- Define signals ---
 f_sig1 = 60;   sig1 = @(t) sin(2*pi*f_sig1.*t); 
 f_sig2 = 100;  sig2 = @(t) cos(2*pi*f_sig2.*t + pi/4);
 f_sig3 = 180;  sig3 = @(t) 0.5 * sin(2*pi*f_sig3.*t);
@@ -16,12 +15,9 @@ f_sig3 = 180;  sig3 = @(t) 0.5 * sin(2*pi*f_sig3.*t);
 signals = {sig1, sig2, sig3};
 names   = {'Signal 1: Sine 60Hz','Signal 2: Cosine 100Hz','Signal 3: Sine 180Hz (Aliased)'};
 
-% --- RMSE storage ---
 RMSE = zeros(numel(signals), numel(K_list));
 
-%% --- MAIN LOOP ---
 for s = 1:numel(signals)
-    
     x_func = signals{s};    
     x_true = x_func(t_uniform); 
     
@@ -30,7 +26,7 @@ for s = 1:numel(signals)
         
         rng(100 + s*10 + ik);        
         k_n   = randi([-K, K], 1, N);  
-        eps_n = k_n * Delta;         
+        eps_n = k_n * Delta;          
         t_jit = t_uniform + eps_n;   
         x_hat = x_func(t_jit);       
         
@@ -61,7 +57,6 @@ for s = 1:numel(signals)
         
         RMSE(s, ik) = sqrt(mean((x_est - x_true).^2)); 
         
-        % --- Plotting for K=2 ---
         if K == 2
             figure;
             subplot(4,1,1); plot(t_uniform, x_true, 'k','LineWidth',1.4);
@@ -90,7 +85,6 @@ for s = 1:numel(signals)
     fprintf('\n');
 end
 
-%% --- RMSE Summary Plot ---
 figure;
 plot(K_list, RMSE(1,:), '-o','LineWidth',1.6); hold on;
 plot(K_list, RMSE(2,:), '-s','LineWidth',1.6);
