@@ -1,0 +1,198 @@
+clc; clear; close all;
+%% setting things up
+[y,fs]=audioread('File2.wav');
+if size(y,2)>1
+    y=mean(y,2);
+end
+total_samples=length(y);
+time_axis_audio=(0:total_samples-1)/fs;
+
+%% finding the beats
+w=2048; 
+ov=1024;
+[stft_matrix,freq_axis,time_axis_stft]=stft(y,fs,'Window',hann(w),'OverlapLength',ov);
+mag=abs(stft_matrix);
+mag_db=20*log10(mag); % getting db for the graph
+
+% calculating the flux thingy
+flux=sum(max(diff(mag,1,2),0));
+flux=[0,flux]; 
+flux=flux/max(flux);
+
+% locating the hits
+[peaks,indices]=findpeaks(flux,'MinPeakHeight',0.05,'MinPeakDistance',5);
+hit_times=time_axis_stft(indices);
+num_hits=length(hit_times);
+
+disp(['found ' num2str(num_hits) ' hits']);
+
+%% figuring out what drum it is
+hit_freqs=zeros(1,num_hits);
+energy=sum(mag.^2); 
+energy=energy/max(energy);
+% smooth the energy curve so it doesnt jitter and cut off too early
+energy=movmean(energy,5);
+
+% cutoffs for the 4 groups (added a middle one)
+cut1=4000; 
+cut2=6000; % new split
+cut3=8000;
+
+% making lists for the 4 drums
+group1=[]; 
+group2=[]; 
+group3=[];
+group4=[]; % added group 4
+gap=zeros(round(0.1*fs),1);
+
+% saving these spots to show on the graph later
+starts_plot=zeros(1,num_hits);
+ends_plot=zeros(1,num_hits);
+
+for k=1:num_hits
+    % getting start time
+    t_start=hit_times(k);
+    idx_start=round(t_start*fs);
+    
+    % seeing how long the sound is
+    % find the closest frame
+    [~,current_frame]=min(abs(time_axis_stft-t_start));
+    
+    % keep looking until it gets quiet
+    frame_end=current_frame;
+    while frame_end<length(energy)
+        if energy(frame_end)<=0.01
+            break;
+        end
+        frame_end=frame_end+1;
+    end
+    
+    % save points for the plot
+    starts_plot(k)=current_frame;
+    ends_plot(k)=frame_end;
+    
+    % get the end sample index
+    idx_end=round(time_axis_stft(frame_end)*fs);
+    
+    % bounds check just in case
+    if idx_start<1
+        idx_start=1; 
+    end
+    
+    if idx_end>total_samples
+        idx_end=total_samples; 
+    end
+    
+    if idx_end<=idx_start
+        idx_end=idx_start+round(0.1*fs); 
+    end 
+    
+    % grabbing the audio
+    sound_clip=y(idx_start:idx_end);
+    
+    % doing the freq math
+    fft_val=abs(fft(sound_clip));
+    len=length(sound_clip);
+    f_ax=fs*(0:(len/2))/len;
+    amp=fft_val(1:floor(len/2)+1);
+    
+    top=sum(f_ax'.*amp);
+    bottom=sum(amp);
+    
+    if bottom==0
+        val=0;
+    else
+        val=top/bottom;
+    end
+    hit_freqs(k)=val;
+    
+    % sorting it out into 4 groups now
+    if val<cut1
+        group1=[group1; sound_clip; gap];
+    elseif val<cut2
+        group2=[group2; sound_clip; gap];
+    elseif val<cut3
+        group3=[group3; sound_clip; gap];
+    else
+        group4=[group4; sound_clip; gap];
+    end
+end
+
+%% showing the graphs
+% just the waveform
+figure;
+plot(time_axis_audio,y);
+title('Waveform');
+xlabel('Time (s)');
+ylabel('Amplitude');
+legend('Audio Signal');
+grid on;
+
+% the spectrogram view
+figure;
+imagesc(time_axis_stft, freq_axis, mag_db);
+axis xy; 
+title('Spectrogram');
+xlabel('Time (s)');
+ylabel('Frequency (Hz)');
+colorbar;
+
+% showing the detected beats
+figure;
+plot(time_axis_stft,flux); hold on;
+plot(hit_times,peaks,'r.'); % using dots here
+title(['Onset Detection (Total Hits: ' num2str(num_hits) ')']);
+xlabel('Time (s)');
+ylabel('Flux');
+legend('Flux Signal', 'Detected Peaks');
+grid on;
+
+% length of each hit
+figure;
+plot(time_axis_stft,energy); hold on;
+plot(time_axis_stft(starts_plot), energy(starts_plot), 'g.');
+plot(time_axis_stft(ends_plot), energy(ends_plot), 'r.'); 
+title('Hit Durations');
+xlabel('Time (s)');
+ylabel('Energy');
+legend('Energy Profile', 'Start Point', 'End Point');
+grid on;
+
+%% checking the freqs
+figure;
+stem(hit_freqs,'filled');
+title('Frequency Check (use this for thresholds)');
+xlabel('Hit Number');
+ylabel('Frequency (Hz)');
+legend('Centroid Frequency');
+grid on;
+
+%% time between hits
+intervals=diff(hit_times);
+csvwrite('intervals.csv',intervals);
+disp('saved intervals.csv');
+
+%% saving the files
+% writing the low sounds
+if ~isempty(group1)
+    audiowrite('out1.wav',group1,fs);
+    disp('saved out1.wav');
+end
+
+% writing the mid-low sounds
+if ~isempty(group2)
+    audiowrite('out2.wav',group2,fs);
+    disp('saved out2.wav');
+end
+
+% writing the mid-high sounds
+if ~isempty(group3)
+    audiowrite('out3.wav',group3,fs);
+    disp('saved out3.wav');
+end
+
+% writing the high sounds
+if ~isempty(group4)
+    audiowrite('out4.wav',group4,fs);
+    disp('saved out4.wav');
+end
